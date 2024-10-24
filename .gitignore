@@ -1,0 +1,29 @@
+# ROS-related ignores
+log/
+install/
+build/
+.deps/
+.deps.bak/
+.deps-*
+
+# Python ignores
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environments
+venv/
+ENV/
+
+# Ignore IDE settings
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+
+# Ignore image files 
+*.jpg
+*.png
+*.jpeg
