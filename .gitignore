@@ -27,3 +27,7 @@ Thumbs.db
 *.jpg
 *.png
 *.jpeg
+
+# Ignore data and video folders
+e2e_data/
+video/
