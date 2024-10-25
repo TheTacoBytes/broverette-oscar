@@ -1,4 +1,4 @@
-cd broverette_ws
+cd broverette_oscar_ws
 colcon build
 cd ..
 
