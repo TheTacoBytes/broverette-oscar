@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import rclpy
 from rclpy.node import Node
 import cv2
@@ -26,11 +24,12 @@ if config['vehicle_name'] == 'broverette':
 else:
     exit(config['vehicle_name'] + ' not supported vehicle.')
 
+
 class DataCollection(Node):
     def __init__(self):
         super().__init__('data_collection_node')
         self.stop_script = False  
-        
+
         self.steering = 0
         self.throttle = 0
         self.brake = 0
@@ -61,6 +60,7 @@ class DataCollection(Node):
         self.create_subscription(Control, config['vehicle_control_topic'], self.steering_throttle_cb, 10)
         self.create_subscription(Odometry, config['base_pose_topic'], self.pos_vel_cb, 10)
         self.create_subscription(Image, config['camera_image_topic'], self.recorder_cb, 10)
+        self.create_subscription(Joy, 'joy', self.joy_callback, 10)  
 
     def calc_velocity(self, x, y, z):
         return math.sqrt(x**2 + y**2 + z**2)
@@ -117,13 +117,19 @@ class DataCollection(Node):
 
         self.text.write(line)
 
-        # Display the image feed in a window
         cv2.imshow("Camera Feed", rgb_image)
 
-        # Wait for 1 millisecond to check for key press
         if cv2.waitKey(1) != -1: 
             self.get_logger().info('Key pressed, stopping the feed and closing the script.')
-            self.stop_script = True  # Set flag to stop the script
+            self.stop_script = True  
+
+    def joy_callback(self, message):
+        """
+        Handles incoming Joy messages to stop the script when Button 2 is pressed.
+        """
+        if message.buttons[2] == 1:  
+            self.get_logger().info('Button 2 pressed, stopping the feed and closing the script.')
+            self.stop_script = True  
 
 def main(args=None):
     rclpy.init(args=args)
@@ -131,12 +137,12 @@ def main(args=None):
     dc = DataCollection()
 
     try:
-        while rclpy.ok() and not dc.stop_script:  # Spin the node until 'stop_script' is True
+        while rclpy.ok() and not dc.stop_script:  
             rclpy.spin_once(dc)
     except KeyboardInterrupt:
         pass
 
-    # Close the CSV file and ensure windows are destroyed
+    
     dc.text.close()
     cv2.destroyAllWindows()  
     rclpy.shutdown()
