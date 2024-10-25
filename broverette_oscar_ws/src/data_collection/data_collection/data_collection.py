@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Updated for ROS 2 Humble
-
-This script collects data and saves images when the feed is displayed.
-The script stops and exits when any key is pressed.
-
-@author: jaerock
-"""
-
 import rclpy
 from rclpy.node import Node
 import cv2
