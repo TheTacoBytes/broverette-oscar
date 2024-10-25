@@ -9,7 +9,7 @@ export BROVERETTE_PATH=$(pwd)
 
 ##
 # set up catkin_ws with setup.bash
-source broverette_ws/install/setup.bash
+source broverette_oscar_ws/install/setup.bash
 
 ##
 # add neural_net folder to PYTHONPATH
