@@ -55,10 +55,10 @@ steering_angle_jitter_tolerance: 0.01
 ## when training and running, cropping input image 
 
 # crop (capture) area from a camera image
-image_crop_x1: 0 #0
-image_crop_y1: 240 #155   # 373
-image_crop_x2: 640 #640
-image_crop_y2: 480 #375   # 516
+image_crop_x1: 0 
+image_crop_y1: 34 
+image_crop_x2: 640 
+image_crop_y2: 480 
 
 # camera image size
 image_width: 640

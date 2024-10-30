@@ -20,8 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'g920_control = broverette_controllers.joystick_translator:main',
-            'ds4_control = broverette_controllers.ps4_translator:main'
+            'g920_control = broverette_controllers.G920_translator:main',
+            'ds4_control = broverette_controllers.Ps4_translator:main',
+            'xbox_control = broverette_controllers.Xbox_translator:main',
         ],
     },
 )

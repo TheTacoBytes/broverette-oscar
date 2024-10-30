@@ -27,7 +27,7 @@ config = Config.neural_net
 
 
 if Config.data_collection['vehicle_name'] == 'broverette':
-    from ackbot_msgs.msg import Control 
+    from broverette_msgs.msg import Control 
 else:
     exit(Config.data_collection['vehicle_name'] + ' not supported vehicle.')
 

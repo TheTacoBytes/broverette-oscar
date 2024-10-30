@@ -17,7 +17,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-import os
+
 from config import Config
 
 
@@ -34,9 +34,6 @@ class DriveData:
         self.velocities_xyz = []
         self.angular_velocities_xyz = []
         self.positions_xyz = []
-        self.output_folder = (f"{self.timestamp}")
-        self.trained_model_loc = os.path.join("train_output", self.output_folder)
-        os.makedirs(self.trained_model_loc, exist_ok=True)
 
 
     # nrows: Number of rows of file to read. Useful for reading peieces of large files
@@ -112,8 +109,8 @@ class DriveData:
             ax2.set(title = 'Normalized')          
 
             plt.tight_layout()
-            plt.savefig(os.path.join(self.trained_model_loc, self.output_folder) + '_normalized.png', dpi=150)
-            plt.savefig(os.path.join(self.trained_model_loc, self.output_folder) + '_normalized.pdf', dpi=150)
+            plt.savefig(self.get_data_path() + '_' + self.timestamp + '_normalized.png', dpi=150)
+            plt.savefig(self.get_data_path() + '_' + self.timestamp + '_normalized.pdf', dpi=150)
             #plt.show()
 
         ############################################ 

@@ -3,10 +3,10 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from ackbot_msgs.msg import Control
+from broverette_msgs.msg import Control
 
 #######################################
-# PS4 Controller Mapping
+# Xbox Controller Mapping
 
 # Steering
 STEERING_AXIS = 0   # left 1 --> center 0 --> right -1
@@ -18,12 +18,12 @@ BRAKE_AXIS = 2      # release 1 --> press -1 for brake
 # Gear shift buttons
 FORWARD_GEAR_BUTTON = 0     # Button 0 for forward (drive)
 REVERSE_GEAR_BUTTON = 1     # Button 1 for reverse
-NEUTRAL_GEAR_BUTTON = 3     # Button 3 for neutral
+NEUTRAL_GEAR_BUTTON = 2     # Button 2 for neutral
 SPEED_LIMIT_BUTTON = 5      # Button 5 for toggling the speed limit
 
-class PS4ControlTranslator(Node):
+class XboxControlTranslator(Node):
     def __init__(self):
-        super().__init__('ps4_control_translator')
+        super().__init__('Xbox_control_translator')
 
         self.subscription = self.create_subscription(
             Joy,
@@ -120,7 +120,7 @@ class PS4ControlTranslator(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    node = PS4ControlTranslator()
+    node = XboxControlTranslator()
 
     try:
         rclpy.spin(node)
@@ -133,3 +133,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+

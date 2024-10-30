@@ -31,3 +31,5 @@ Thumbs.db
 # Ignore data and video folders
 e2e_data/
 video/
+train_output/
+logs/
