@@ -93,6 +93,42 @@ This command initializes:
 
 2. Training history and model checkpoints are stored in the `train_output` directory.
 
+## Using the Trained Model
+
+
+To use the trained model with the `NeuralControl` class, you can run the script with the necessary weight file(s) as input.
+
+1. Make sure ROS 2 is initialized:
+
+   ```
+   cd ~/broverette/b_oscar/
+   source setup.bash
+   ```
+
+2. Run the `run_neural` node with the trained weight file(s):
+
+   ```
+   ros2 run run_neural run_neural weight_file_name [weight_file_name2]
+   ```
+
+   - Replace `weight_file_name` with the path to the primary trained model file.
+   - Optionally, add a second model file as `weight_file_name2` for multi-model usage.
+
+### Script Overview
+
+The script initializes a ROS 2 node named `run_neural` using the trained model to make real-time driving predictions based on incoming image and velocity data. Key components:
+
+- **Image Processing and Prediction**: Captures and preprocesses camera images, then uses the trained model to predict steering and throttle values.
+- **Control Message Publishing**: Publishes `Control` messages based on predictions, which control the vehicle's movement.
+- **Real-Time Display and Control**: Shows the processed image in a window and allows for manual override by pressing any key.
+
+This script uses the following inputs:
+- `Image` messages from the specified camera topic.
+- `Odometry` data for velocity information.
+- **Configuration Requirements**: Ensure the topics and control values are configured in `config.yaml` according to your vehicle's setup.
+
+
+
 
 ## Requirements File
 
