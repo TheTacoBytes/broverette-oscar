@@ -108,11 +108,10 @@ To use the trained model with the `NeuralControl` class, you can run the script 
 2. Run the `run_neural` node with the trained weight file(s):
 
    ```
-   ros2 run run_neural run_neural weight_file_name [weight_file_name2]
+   ros2 run run_neural run_neural weight_file_name
    ```
 
-   - Replace `weight_file_name` with the path to the primary trained model file.
-   - Optionally, add a second model file as `weight_file_name2` for multi-model usage.
+   - Replace `weight_file_name` with the path to the primary trained model file (look at `/train_output/<folder-time-stamped/filename.keras`.
 
 ### Script Overview
 
