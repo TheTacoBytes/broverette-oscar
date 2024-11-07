@@ -30,8 +30,8 @@ This project extends the OSCAR architecture with multi-input capabilities and te
 ### GPU Support (Optional)
 
 To enable GPU acceleration with TensorFlow, ensure the following are installed:
-- **CUDA**: 11.8
-- **cuDNN**: 8.7
+- **CUDA**: 11.8 (From my tests supports 12.6)
+- **cuDNN**: 8.7 (From my tests supports 9.5.1)
 
 You can download CUDA from the [NVIDIA CUDA Toolkit page](https://developer.nvidia.com/cuda-downloads) and cuDNN from the [NVIDIA cuDNN page](https://developer.nvidia.com/cudnn).
 
