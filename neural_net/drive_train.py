@@ -2,19 +2,17 @@ import os
 import sys
 from datetime import datetime
 import matplotlib.pyplot as plt
-import numpy as np
+import tensorflow as tf
 import cv2
 import glob
-import sklearn
-from sklearn.model_selection import train_test_split
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
+from keras.losses import MeanSquaredError
 
 import const
 from net_model import NetModel
 from drive_data import DriveData
 from config import Config
 from image_process import ImageProcess
-from data_augmentation import DataAugmentation
 import utilities
 
 config = Config.neural_net
@@ -23,12 +21,17 @@ class DriveTrain:
     def __init__(self, data_paths):
         # Timestamp and output folder initialization
         self.timestamp = utilities.get_current_timestamp()
-        self.output_folder = (f"{self.timestamp}")
+        self.output_folder = f"{self.timestamp}"
         self.trained_model_loc = os.path.join("train_output", self.output_folder)
         os.makedirs(self.trained_model_loc, exist_ok=True)
-        self.ckpt_dir = os.path.join( self.trained_model_loc,self.output_folder + '_' + const.CKPT_DIR)
+        self.ckpt_dir = os.path.join(self.trained_model_loc, self.output_folder + '_' + const.CKPT_DIR)
         
-        self.data_entries = []
+        self.image_process = ImageProcess()
+
+        # Prepare data lists
+        self.images, self.velocities, self.measurements = [], [], []
+        
+        # Read CSV and images
         for main_data_path in data_paths:
             csv_files = glob.glob(os.path.join(main_data_path, "*.csv"))
             if not csv_files:
@@ -37,101 +40,92 @@ class DriveTrain:
             csv_path = csv_files[0]
             drive_data = DriveData(csv_path, self.timestamp)
             drive_data.read()
-            # Add entries
-            for image_name, velocity, measurement in zip(drive_data.image_names, drive_data.velocities, drive_data.measurements):
-                full_image_path = os.path.join(main_data_path, image_name)
-                self.data_entries.append((full_image_path, velocity, measurement))
 
+            # Process each image and measurement
+            for image_name, velocity, measurement in zip(drive_data.image_names, drive_data.velocities, drive_data.measurements):
+                # print(f"Loading image: {image_name}, Velocity: {velocity}, Measurement: {measurement}")
+                full_image_path = os.path.join(main_data_path, image_name)
+                image = cv2.imread(full_image_path)
+                if image is not None:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    image = self._process_image(image)
+                    self.images.append(image)
+                    self.velocities.append(velocity)
+                    self.measurements.append(measurement)
+                else:
+                    print(f"Warning: Image {full_image_path} could not be loaded.")
+
+        # Print data counts before tensor conversion
+        print(f"Total images loaded: {len(self.images)}")
+        print(f"Total velocities loaded: {len(self.velocities)}")
+        print(f"Total measurements loaded: {len(self.measurements)}")
+
+        # Convert lists to tensors
+        self.images = tf.convert_to_tensor(self.images, dtype=tf.float32)
+        self.velocities = tf.convert_to_tensor(self.velocities, dtype=tf.float32)
+        self.measurements = tf.convert_to_tensor(self.measurements, dtype=tf.float32)
+
+        # Reshape `measurements` based on `num_outputs`
+        if config['num_outputs'] == 1:
+            # Keep only steering angle as the output
+            self.measurements = tf.reshape(self.measurements[:, 0], (-1, 1))
+        elif config['num_outputs'] == 2:
+            # Include steering angle and throttle
+            self.measurements = tf.reshape(self.measurements[:, :2], (-1, 2))
+
+        # Initialize model and other components
         self.net_model = NetModel(data_paths[0])
-        self.image_process = ImageProcess()
-        self.data_aug = DataAugmentation()
+
+    def _process_image(self, image):
+        # Crop and resize the image, then apply any additional preprocessing
+        image = image[Config.neural_net['image_crop_y1']:Config.neural_net['image_crop_y2'],
+                      Config.neural_net['image_crop_x1']:Config.neural_net['image_crop_x2']]
+        image = cv2.resize(image, (config['input_image_width'], config['input_image_height']))
+        return self.image_process.process(image)
 
     def _prepare_data(self):
-        samples = self.data_entries
-        if config['lstm']:
-            self.train_data, self.valid_data = self._prepare_lstm_data(samples)
-        else:    
-            self.train_data, self.valid_data = train_test_split(samples, test_size=config['validation_rate'])
+        print(f"Number of images loaded: {len(self.images)}")
+        print(f"Number of velocities loaded: {len(self.velocities)}")
+        print(f"Number of measurements loaded: {len(self.measurements)}")
+
+        # Use tf.data.Dataset to create a dataset
+        if config['num_inputs'] == 2:
+            # Dual input: images and velocities
+            dataset = tf.data.Dataset.from_tensor_slices(((self.images, self.velocities), self.measurements))
+        else:
+            # Single input: images only
+            dataset = tf.data.Dataset.from_tensor_slices((self.images, self.measurements))
         
-        self.num_train_samples = len(self.train_data)
-        self.num_valid_samples = len(self.valid_data)
-
-    def _prepare_lstm_data(self, samples):
-        num_samples = len(samples)
-        steps = 1
-        last_index = (num_samples - config['lstm_timestep']) // steps
-        image_names, velocities, measurements = [], [], []
-
-        for i in range(0, last_index, steps):
-            sub_samples = samples[i: i + config['lstm_timestep']]
-            sub_image_names, sub_velocities, sub_measurements = [], [], []
-            for image_name, velocity, measurement in sub_samples:
-                sub_image_names.append(image_name)
-                sub_velocities.append(velocity)
-                sub_measurements.append(measurement)
-            image_names.append(sub_image_names)
-            velocities.append(sub_velocities)
-            measurements.append(sub_measurements)
+        # Shuffle and batch the dataset
+        dataset = dataset.shuffle(buffer_size=len(self.images))
         
-        return train_test_split(list(zip(image_names, velocities, measurements)), test_size=config['validation_rate'], shuffle=False)
+        # Split dataset into training and validation sets
+        val_size = int(config['validation_rate'] * len(self.images))
+        
+        # Separate training and validation datasets
+        self.train_data = dataset.take(len(self.images) - val_size).batch(config['batch_size']).prefetch(tf.data.AUTOTUNE)
+        self.valid_data = dataset.skip(len(self.images) - val_size).batch(config['batch_size']).prefetch(tf.data.AUTOTUNE)
 
-    def _generator(self, samples, batch_size=config['batch_size']):
-        num_samples = len(samples)
-        while True:
-            samples = sklearn.utils.shuffle(samples)
-            for offset in range(0, num_samples, batch_size):
-                batch_samples = samples[offset:offset + batch_size]
-                images, velocities, measurements = self._prepare_batch_samples(batch_samples)
-                X_train = np.array(images).reshape(-1, config['input_image_height'], config['input_image_width'], config['input_image_depth'])
-                y_train = np.array(measurements).reshape(-1, 1)
-                
-                if config['num_inputs'] == 2:
-                    X_train_vel = np.array(velocities).reshape(-1, 1)
-                    X_train = [X_train, X_train_vel]
-                yield X_train, y_train
-
-    def _prepare_batch_samples(self, batch_samples):
-        images, velocities, measurements = [], [], []
-        for image_name, velocity, measurement in batch_samples:
-            print(f"Feeding image to neural network: {image_name}") 
-            image = cv2.imread(image_name)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = image[Config.neural_net['image_crop_y1']:Config.neural_net['image_crop_y2'],
-                          Config.neural_net['image_crop_x1']:Config.neural_net['image_crop_x2']]
-            image = cv2.resize(image, (config['input_image_width'], config['input_image_height']))
-            image = self.image_process.process(image)
-            images.append(image)
-            velocities.append(velocity)
-            steering_angle, throttle, brake = measurement
-            if abs(steering_angle) < config['steering_angle_jitter_tolerance']:
-                steering_angle = 0
-            if config['num_outputs'] == 2:
-                measurements.append((steering_angle * config['steering_angle_scale'], throttle))
-            else:
-                measurements.append(steering_angle * config['steering_angle_scale'])
-        return images, velocities, measurements
+        print(f"Training data size: {len(list(self.train_data))}")
+        print(f"Validation data size: {len(list(self.valid_data))}")
 
     def _build_model(self, show_summary=True):
-        self.train_generator = self._generator(self.train_data)
-        self.valid_generator = self._generator(self.valid_data)
         if show_summary:
             self.net_model.model.summary()
 
     def _start_training(self):
-        from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
-        if self.train_generator is None:
-            raise NameError("Generators are not ready.")
-
-        # Prepare the checkpoint directory and filename structure
-        model_ckpt_name = os.path.join(
-            self.ckpt_dir,
-            f"{self.timestamp}_{Config.neural_net_yaml_name}_n{config['network_type']}"
-        )
+        if not self.train_data:
+            raise NameError("Data is not prepared.")
 
         # Setting up callbacks
         callbacks = []
 
+        # Model checkpoint callback
         if config['checkpoint']:
+            model_ckpt_name = os.path.join(
+                self.ckpt_dir,
+                f"{self.timestamp}_{Config.neural_net_yaml_name}_n{config['network_type']}"
+            )
             checkpoint = ModelCheckpoint(
                 filepath=model_ckpt_name + "_{epoch:02d}-{val_loss:.2f}",
                 monitor="val_loss",
@@ -141,6 +135,7 @@ class DriveTrain:
             )
             callbacks.append(checkpoint)
 
+        # Early stopping callback
         earlystop = EarlyStopping(
             monitor="val_loss",
             min_delta=0,
@@ -150,23 +145,19 @@ class DriveTrain:
         )
         callbacks.append(earlystop)
 
-        # tensorboard_logdir = os.path.join(self.output_folder, "logs", self.timestamp)
+        # TensorBoard callback
         tensorboard_logdir = config['tensorboard_log_dir'] + datetime.now().strftime("%Y%m%d-%H%M%S")
         tensorboard = TensorBoard(log_dir=tensorboard_logdir)
         callbacks.append(tensorboard)
 
         # Start training
         self.train_hist = self.net_model.model.fit(
-            self.train_generator,
-            steps_per_epoch=self.num_train_samples // config['batch_size'],
+            self.train_data,
+            validation_data=self.valid_data,
             epochs=config['num_epochs'],
-            validation_data=self.valid_generator,
-            validation_steps=self.num_valid_samples // config['batch_size'],
             verbose=1,
-            callbacks=callbacks,
-            use_multiprocessing=True
+            callbacks=callbacks
         )
-
 
     def _plot_training_history(self):
         plt.figure()
@@ -183,7 +174,7 @@ class DriveTrain:
         self._prepare_data()
         self._build_model(show_summary)
         self._start_training()
-        self.net_model.save(os.path.join(self.trained_model_loc,f"{Config.neural_net_yaml_name}_n{config['network_type']}_model"))
+        self.net_model.save(os.path.join(self.trained_model_loc, f"{Config.neural_net_yaml_name}_n{config['network_type']}_model"))
         self._plot_training_history()
         Config.summary()
 
