@@ -8,7 +8,8 @@
 export BROVERETTE_PATH=$(pwd)
 
 ##
-# set up catkin_ws with setup.bash
+# Set up ros and ws
+source /opt/ros/humble/setup.bash
 source broverette_oscar_ws/install/setup.bash
 
 ##
