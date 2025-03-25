@@ -69,7 +69,7 @@ To start data collection with the desired controller, use the following command:
 ```
 cd ~/broverette/b_oscar/
 source setup.bash
-ros2 launch broverette_controllers data_collection_launch.py name:=<custom_name>
+ros2 launch data_collection data_collection_launch.py name:=<custom_name>
 ```
 
 This command initializes:
