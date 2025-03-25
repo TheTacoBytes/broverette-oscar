@@ -43,7 +43,7 @@ You can download CUDA from the [NVIDIA CUDA Toolkit page](https://developer.nvid
    ```
    mkdir -p ~/broverette/b_oscar
    cd ~/broverette/b_oscar
-   git clone https://github.com/yourusername/broverette_oscar .
+   git clone https://github.com/TheTacoBytes/broverette_oscar .
    ./ros_build.sh
    ```
 
