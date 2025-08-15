@@ -88,10 +88,15 @@ This command initializes:
 1. Run the training script with your data paths:
    ```
    cd ~/broverette/b_oscar/
-   python3 neural_net/train.py <data_path1> <data_path2> ...
+   python3 neural_net/train_single.py <data_path1>
    ```
 
-2. Training history and model checkpoints are stored in the `train_output` directory.
+2. Training history and model checkpoints are stored in the `e2e_data/<data_path1>` directory.
+3. 1. Run the model script with your data paths:
+   ```
+   cd ~/broverette/b_oscar/
+   ros2 run run_neural run_neural e2e_data/<data_path1>/<weight_file_name>.keras
+   ```
 
 
 ## Requirements File
